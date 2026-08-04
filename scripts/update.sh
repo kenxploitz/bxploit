@@ -1,8 +1,8 @@
 #!/bin/sh
 # ============================================================================
-# Bungul Exploit (bxploit) — Standalone Updater
-# Usage: sh update.sh
-#        curl -sL https://raw.githubusercontent.com/.../update.sh | sh
+# Bungul Exploit (bxploit) — Updater
+# Usage: bxploit --update
+#        sh update.sh
 # ============================================================================
 
 set -e
@@ -15,78 +15,156 @@ else
 fi
 
 BXPLOIT_HOME="${BXPLOIT_HOME:-$HOME/.bxploit}"
-BINARY_PATH="$BXPLOIT_HOME/bin/kimi-code"
+BINARY="$BXPLOIT_HOME/bin/kimi-code"
+CLI_BIN="$HOME/.local/bin/bxploit"
 GITHUB_REPO="MoonshotAI/kimi-code"
+BXPLOIT_REPO="kenxploitz/bxploit"
 
-info()  { printf "%s[+]%s %s\n" "$GREEN" "$RESET" "$1"; }
-warn()  { printf "%s[!]%s %s\n" "$YELLOW" "$RESET" "$1"; }
-die()   { printf "%s[-]%s %s\n" "$RED" "$RESET" "$1"; exit 1; }
+info()  { printf "  ${GREEN}[+]${NC} %s\n" "$1"; }
+warn()  { printf "  ${YELLOW}[!]${NC} %s\n" "$1"; }
+fail()  { printf "  ${RED}[x]${NC} %s\n" "$1"; exit 1; }
+success() { printf "  ${GREEN}[✓]${NC} %s\n" "$1"; }
 
-printf "%s%sBXPLOIT UPDATER%s\n\n" "$BOLD" "$CYAN" "$RESET"
+# Banner
+printf "\n"
+printf "  ${RED}██████╗ ██╗  ██╗██████╗ ██╗      ██████╗ ██╗████████╗${NC}\n"
+printf "  ${RED}██╔══██╗╚██╗██╔╝██╔══██╗██║     ██╔═══██╗██║╚══██╔══╝${NC}\n"
+printf "  ${RED}██████╔╝ ╚███╔╝ ██████╔╝██║     ██║   ██║██║   ██║${NC}\n"
+printf "  ${RED}██╔══██╗ ██╔██╗ ██╔═══╝ ██║     ██║   ██║██║   ██║${NC}\n"
+printf "  ${RED}██████╔╝██╔╝ ██╗██║     ███████╗╚██████╔╝██║   ██║${NC}\n"
+printf "  ${RED}╚═════╝ ╚═╝  ╚═╝╚═╝     ╚══════╝ ╚═════╝ ╚═╝   ╚═╝${NC}\n"
+printf "\n"
+printf "  ${BOLD}UPDATER${NC}\n\n"
 
 # Check installation
-if [ ! -f "$BINARY_PATH" ]; then
-    die "Bxploit not found at $BINARY_PATH. Run install.sh first."
-fi
+[ ! -f "$BINARY" ] && fail "Bxploit not found. Run install.sh first."
 
 # Get current version
-CURRENT_VER=$("$BINARY_PATH" --version 2>/dev/null || echo "unknown")
-info "Current version: $CURRENT_VER"
+CURRENT_VER=$("$BINARY" --version 2>/dev/null || echo "unknown")
+info "Current: $CURRENT_VER"
 
-# Get latest release
-info "Checking latest release..."
-TAG=$(curl -s "https://api.github.com/repos/$GITHUB_REPO/releases/latest" | grep '"tag_name"' | sed 's/.*: *"//;s/".*//')
-[ -z "$TAG" ] && die "Failed to check latest release"
-info "Latest: $TAG"
-
-# Download new binary
+# Detect arch
 ARCH="$(uname -m)"
 case "$ARCH" in
     x86_64|amd64) ARCH_NAME="x64" ;;
     aarch64|arm64) ARCH_NAME="arm64" ;;
-    *) die "Unsupported: $ARCH" ;;
+    *) fail "Unsupported: $ARCH" ;;
 esac
 
-ENCODED_TAG=$(python3 -c "import urllib.parse; print(urllib.parse.quote('$TAG'))" 2>/dev/null || die "python3 required")
-DOWNLOAD_URL="https://github.com/$GITHUB_REPO/releases/download/${ENCODED_TAG}/kimi-code-linux-${ARCH_NAME}.zip"
+# ── Update Binary ──
+printf "\n  ${CYAN}─────────────────────────────────────────────${NC}\n"
+printf "  ${BOLD}Update Binary${NC}\n"
+printf "  ${CYAN}─────────────────────────────────────────────${NC}\n\n"
 
-info "Downloading..."
-TMP_DIR=$(mktemp -d)
-curl -fsSL -o "$TMP_DIR/kimi-code.zip" "$DOWNLOAD_URL" || die "Download failed"
+info "Checking latest release..."
+TAG=$(curl -s "https://api.github.com/repos/$GITHUB_REPO/releases/latest" | grep '"tag_name"' | sed 's/.*: *"//;s/".*//')
+[ -z "$TAG" ] && fail "Failed to check latest release"
+info "Latest: $TAG"
 
-# Backup current
-cp "$BINARY_PATH" "$BINARY_PATH.bak" 2>/dev/null
+ENCODED_TAG=$(python3 -c "import urllib.parse; print(urllib.parse.quote('$TAG'))" 2>/dev/null || fail "python3 required")
 
-# Extract
-cd "$TMP_DIR" && unzip -o kimi-code.zip 2>/dev/null || die "Extraction failed"
-mv kimi "$BINARY_PATH" 2>/dev/null || mv kimi-code "$BINARY_PATH" 2>/dev/null || die "Binary not found"
-chmod +x "$BINARY_PATH"
-rm -rf "$TMP_DIR"
+info "Downloading binary..."
+TMP=$(mktemp -d)
+curl -fsSL -o "$TMP/kimi.zip" "https://github.com/$GITHUB_REPO/releases/download/${ENCODED_TAG}/kimi-code-linux-${ARCH_NAME}.zip" || fail "Download failed"
+cd "$TMP" && unzip -o kimi.zip 2>/dev/null || fail "Extract failed"
 
-# Patch welcome message
-info "Patching..."
-python3 -c "
-with open('$BINARY_PATH', 'rb') as f:
-    data = f.read()
-data = data.replace(b'Welcome to Kimi Code!', b'Welcome to Bxploit! ')
-with open('$BINARY_PATH', 'wb') as f:
-    f.write(data)
-" 2>/dev/null || warn "Patch failed (non-critical)"
+# Backup
+cp "$BINARY" "$BINARY.bak" 2>/dev/null
 
-# Copy skills/knowledge if source exists
-for src_dir in "$HOME/bxploit" "$HOME/bxploit-source"; do
-    if [ -d "$src_dir/plugins/bxploit-pentest" ]; then
-        cp -r "$src_dir/plugins/bxploit-pentest/skills/"* "$BXPLOIT_HOME/skills/" 2>/dev/null
-        cp -r "$src_dir/plugins/bxploit-pentest/"* "$BXPLOIT_HOME/plugins/bxploit-pentest/" 2>/dev/null
-        cp -r "$src_dir/knowledge/"* "$BXPLOIT_HOME/knowledge/" 2>/dev/null
-        cp "$src_dir/plugins/bxploit-pentest/SYSTEM.md" "$BXPLOIT_HOME/SYSTEM.md" 2>/dev/null
-        info "Assets updated"
-        break
+# Replace
+mv kimi "$BINARY" 2>/dev/null || mv kimi-code "$BINARY" 2>/dev/null || fail "Binary not found"
+chmod +x "$BINARY"
+rm -rf "$TMP"
+success "Binary updated"
+
+# ── Update Assets ──
+printf "\n  ${CYAN}─────────────────────────────────────────────${NC}\n"
+printf "  ${BOLD}Update Skills & Knowledge${NC}\n"
+printf "  ${CYAN}─────────────────────────────────────────────${NC}\n\n"
+
+info "Downloading assets..."
+TMP=$(mktemp -d)
+curl -fsSL -o "$TMP/bxploit.zip" "https://github.com/$BXPLOIT_REPO/archive/refs/heads/main.zip" 2>/dev/null || { warn "Assets download failed"; rm -rf "$TMP"; }
+if [ -f "$TMP/bxploit.zip" ]; then
+    cd "$TMP" && unzip -o bxploit.zip 2>/dev/null
+    SRC="$TMP/bxploit-main"
+
+    # Update skills
+    if [ -d "$SRC/plugins/bxploit-pentest/skills" ]; then
+        mkdir -p "$BXPLOIT_HOME/skills"
+        cp -r "$SRC/plugins/bxploit-pentest/skills/"* "$BXPLOIT_HOME/skills/" 2>/dev/null
+        success "Skills updated"
     fi
-done
 
-# Verify
-NEW_VER=$("$BINARY_PATH" --version 2>/dev/null || echo "unknown")
-printf "\n"
-info "Updated: $CURRENT_VER → $NEW_VER"
-info "Done! Run: bxploit"
+    # Update knowledge
+    if [ -d "$SRC/knowledge" ]; then
+        mkdir -p "$BXPLOIT_HOME/knowledge"
+        cp -r "$SRC/knowledge/"* "$BXPLOIT_HOME/knowledge/" 2>/dev/null
+        KNOWLEDGE=$(find "$BXPLOIT_HOME/knowledge" -name "*.md" 2>/dev/null | wc -l)
+        success "Knowledge updated ($KNOWLEDGE files)"
+    fi
+
+    # Update plugin
+    if [ -d "$SRC/plugins/bxploit-pentest" ]; then
+        mkdir -p "$BXPLOIT_HOME/plugins"
+        cp -r "$SRC/plugins/bxploit-pentest" "$BXPLOIT_HOME/plugins/" 2>/dev/null
+        success "Plugin updated"
+    fi
+
+    # Update SYSTEM.md
+    [ -f "$SRC/plugins/bxploit-pentest/SYSTEM.md" ] && cp "$SRC/plugins/bxploit-pentest/SYSTEM.md" "$BXPLOIT_HOME/SYSTEM.md"
+
+    # Update scripts
+    mkdir -p "$BXPLOIT_HOME/scripts"
+    for s in bxploit.sh setup.sh update.sh uninstall.sh install.sh; do
+        [ -f "$SRC/scripts/$s" ] && cp "$SRC/scripts/$s" "$BXPLOIT_HOME/scripts/" 2>/dev/null
+    done
+
+    # Update CLI wrapper
+    if [ -f "$SRC/scripts/install.sh" ]; then
+        # Re-create CLI wrapper from install.sh
+        mkdir -p "$(dirname "$CLI_BIN")"
+        cat > "$CLI_BIN" << 'WRAPPER'
+#!/bin/sh
+BXPLOIT_HOME="${BXPLOIT_HOME:-$HOME/.bxploit}"
+export KIMI_CODE_HOME="$BXPLOIT_HOME"
+export BXPLOIT_HOME="$BXPLOIT_HOME"
+[ ! -d "$HOME/.kimi-code" ] && ln -sf "$BXPLOIT_HOME" "$HOME/.kimi-code" 2>/dev/null
+BXPLOIT_BIN="$BXPLOIT_HOME/bin/kimi-code"
+[ ! -f "$BXPLOIT_BIN" ] && echo "Error: bxploit not installed" && exit 1
+printf '\033]0;Bxploit\007'
+case "$1" in
+    --setup|-s) exec sh "$BXPLOIT_HOME/scripts/setup.sh" "$@" ;;
+    --config|-c) cat "$BXPLOIT_HOME/config.toml" 2>/dev/null || echo "No config. Run: bxploit --setup"; exit 0 ;;
+    --test|-t)
+        BASE_URL=$(grep 'base_url' "$BXPLOIT_HOME/config.toml" 2>/dev/null | head -1 | sed 's/.*= *"\(.*\)"/\1/')
+        API_KEY=$(grep 'api_key' "$BXPLOIT_HOME/config.toml" 2>/dev/null | head -1 | sed 's/.*= *"\(.*\)"/\1/')
+        curl -s -m 10 "$BASE_URL/models" -H "Authorization: Bearer $API_KEY" | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'OK: {len(d.get(\"data\",[]))} models')" 2>/dev/null || echo "Failed"; exit 0 ;;
+    --uninstall) exec sh "$BXPLOIT_HOME/scripts/uninstall.sh" ;;
+    --update|-u) exec sh "$BXPLOIT_HOME/scripts/update.sh" ;;
+    --help|-h) echo "BXPLOIT — AI Pentest Framework"; echo "Usage: bxploit [-p query|--setup|--config|--test|--update|--uninstall|--help]"; exit 0 ;;
+esac
+[ ! -f "$BXPLOIT_HOME/config.toml" ] && echo "Run: bxploit --setup" && exit 1
+HAS_PROMPT=0; for a in "$@"; do [ "$a" = "-p" ] && HAS_PROMPT=1; done
+if [ "$HAS_PROMPT" = "1" ]; then exec "$BXPLOIT_BIN" "$@"; else exec "$BXPLOIT_BIN" --yolo "$@"; fi
+WRAPPER
+        chmod +x "$CLI_BIN"
+        success "CLI wrapper updated"
+    fi
+
+    rm -rf "$TMP"
+fi
+
+# ── Verify ──
+printf "\n  ${CYAN}─────────────────────────────────────────────${NC}\n"
+printf "  ${BOLD}Verify${NC}\n"
+printf "  ${CYAN}─────────────────────────────────────────────${NC}\n\n"
+
+NEW_VER=$("$BINARY" --version 2>/dev/null || echo "unknown")
+[ -f "$BINARY" ] && success "Binary OK" || fail "Binary missing"
+[ -f "$CLI_BIN" ] && success "CLI OK" || fail "CLI missing"
+
+printf "\n  ${GREEN}═══════════════════════════════════════════════════${NC}\n"
+printf "  ${BOLD}  Updated: $CURRENT_VER → $NEW_VER${NC}\n"
+printf "  ${GREEN}═══════════════════════════════════════════════════${NC}\n\n"
+printf "  ${CYAN}Run: bxploit${NC}\n\n"
