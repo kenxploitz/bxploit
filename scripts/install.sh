@@ -45,18 +45,6 @@ if [ ! -f "$BINARY" ]; then
     info "Downloading binary..."
     TAG=$(curl -s "https://api.github.com/repos/$GITHUB_REPO/releases/latest" | grep '"tag_name"' | sed 's/.*: *"//;s/".*//')
     [ -z "$TAG" ] && TAG="@moonshot-ai/kimi-code@0.31.1"
-    ENCODED_TAG=$(python3 -c "import urllib.parse; print(urllib.parse.quote('$TAG'))" 2>/dev/null || echo "%40moonshot-ai%2Fkimi-code%400.31.1")
-    TMP=$(mktemp -d)
-    curl -fsSL -o "$TMP/kimi.zip" "https://github.com/$GITHUB_REPO/releases/download/${ENCODED_TAG}/kimi-code-linux-${ARCH_NAME}.zip" || fail "Download failed"
-    cd "$TMP" && unzip -o kimi.zip 2>/dev/null || fail "Extract failed"
-    mv kimi "$BINARY" 2>/dev/null || mv kimi-code "$BINARY" 2>/dev/null || fail "Binary not found"
-    chmod +x "$BINARY"
-    rm -rf "$TMP"
-    python3 -c "
-with open('$BINARY','rb') as f: d=f.read()
-d=d.replace(b'Welcome to Kimi Code!',b'Welcome to Bxploit! ')
-with open('$BINARY','wb') as f: f.write(d)
-" 2>/dev/null || true
     success "Binary installed"
 else
     success "Binary exists"
@@ -97,31 +85,3 @@ case "$1" in
     --test|-t)
         BASE_URL=$(grep 'base_url' "$BXPLOIT_HOME/config.toml" 2>/dev/null | head -1 | sed 's/.*= *"\(.*\)"/\1/')
         API_KEY=$(grep 'api_key' "$BXPLOIT_HOME/config.toml" 2>/dev/null | head -1 | sed 's/.*= *"\(.*\)"/\1/')
-        curl -s -m 10 "$BASE_URL/models" -H "Authorization: Bearer $API_KEY" | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'OK: {len(d.get(\"data\",[]))} models')" 2>/dev/null || echo "Failed"; exit 0 ;;
-    --uninstall) exec sh "$BXPLOIT_HOME/scripts/uninstall.sh" ;;
-    --update|-u) exec sh "$BXPLOIT_HOME/scripts/update.sh" ;;
-    --help|-h) echo "BXPLOIT — AI Pentest Framework"; echo "Usage: bxploit [-p query|--setup|--config|--test|--update|--uninstall|--help]"; exit 0 ;;
-esac
-[ ! -f "$BXPLOIT_HOME/config.toml" ] && echo "Run: bxploit --setup" && exit 1
-HAS_PROMPT=0; for a in "$@"; do [ "$a" = "-p" ] && HAS_PROMPT=1; done
-if [ "$HAS_PROMPT" = "1" ]; then exec "$BXPLOIT_BIN" "$@"; else exec "$BXPLOIT_BIN" --yolo "$@"; fi
-WRAPPER
-chmod +x "$CLI_BIN"
-success "CLI: $CLI_BIN"
-
-if ! echo "$PATH" | tr ':' '\n' | grep -q "^$HOME/.local/bin$"; then
-    grep -qF "$MARKER" "$SHELL_RC" 2>/dev/null || printf "\n%s\nexport PATH=\"\$HOME/.local/bin:\$PATH\"\n" "$MARKER" >> "$SHELL_RC"
-    info "Added to PATH"
-fi
-
-[ -f "$BINARY" ] && success "Binary OK" || fail "Binary missing"
-[ -f "$CLI_BIN" ] && success "CLI OK" || fail "CLI missing"
-
-printf "\n  ${GREEN}═══════════════════════════════════════════════════${NC}\n"
-printf "  ${BOLD}  BXPLOIT Installed!${NC}\n"
-printf "  ${GREEN}═══════════════════════════════════════════════════${NC}\n\n"
-printf "  ${CYAN}Setup API:${NC}  bxploit --setup\n"
-printf "  ${CYAN}Run:${NC}        bxploit\n"
-printf "  ${CYAN}Update:${NC}     bxploit --update\n"
-printf "  ${CYAN}Uninstall:${NC}  bxploit --uninstall\n\n"
-printf "  ${YELLOW}source %s && bxploit --setup${NC}\n\n" "$SHELL_RC"
