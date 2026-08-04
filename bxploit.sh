@@ -122,12 +122,6 @@ do_install() {
         chmod +x "$BINARY"
         rm -rf "$TMP"
 
-        # Patch welcome message
-        python3 -c "
-with open('$BINARY','rb') as f: d=f.read()
-d=d.replace(b'Welcome to Kimi Code!',b'Welcome to Bxploit! ')
-with open('$BINARY','wb') as f: f.write(d)
-" 2>/dev/null || true
 
         success "Binary installed"
     fi
