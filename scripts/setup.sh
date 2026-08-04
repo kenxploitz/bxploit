@@ -101,7 +101,7 @@ else
 fi
 
 if [ -z "$MODEL" ]; then
-    MODEL="combo/combo/deepseek-v4-pro"
+    MODEL="tumpuk/mimo-v2.5-pro"
 fi
 
 printf "\n${GREEN}[+] Selected model: $MODEL${NC}\n"
