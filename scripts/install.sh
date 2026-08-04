@@ -1,7 +1,7 @@
 #!/bin/sh
 # ============================================================================
 # Bungul Exploit (bxploit) — One-Liner Installer
-# Usage: curl -fsSL https://raw.githubusercontent.com/bungulexploit/bxploit/main/scripts/install.sh | sh
+# Usage: curl -fsSL https://raw.githubusercontent.com/kenxploitz/bxploit/main/scripts/install.sh | sh
 # ============================================================================
 
 set -e
@@ -20,7 +20,7 @@ CLI_BIN="$HOME/.local/bin/bxploit"
 CONFIG_FILE="$BXPLOIT_HOME/config.toml"
 MARKER="# Bungul Exploit"
 GITHUB_REPO="MoonshotAI/kimi-code"
-BXPLOIT_REPO="bungulexploit/bxploit"
+BXPLOIT_REPO="kenxploitz/bxploit"
 
 # --- Logging --------------------------------------------------------------
 info()  { printf "%s[+]%s %s\n" "$GREEN" "$RESET" "$1"; }
