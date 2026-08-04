@@ -15,7 +15,7 @@ INSTALL_DIR="$HOME/.bxploit"
 CONFIG_FILE="$INSTALL_DIR/config.toml"
 BINARY="$INSTALL_DIR/bin/kimi-code"
 CLI_BIN="$HOME/.local/bin/bxploit"
-GITHUB_REPO="MoonshotAI/kimi-code"
+GITHUB_REPO="kenxploitz/bxploit"
 BXPLOIT_REPO="kenxploitz/bxploit"
 MARKER="# Bxploit"
 
@@ -94,7 +94,7 @@ else
     [ -z "$TAG" ] && TAG="@moonshot-ai/kimi-code@0.31.1"
     ENCODED_TAG=$(python3 -c "import urllib.parse; print(urllib.parse.quote('$TAG'))" 2>/dev/null || echo "%40moonshot-ai%2Fkimi-code%400.31.1")
     TMP=$(mktemp -d)
-    curl -fsSL -o "$TMP/kimi.zip" "https://github.com/$GITHUB_REPO/releases/download/${ENCODED_TAG}/kimi-code-linux-${ARCH_NAME}.zip" || { fail "Download failed"; exit 1; }
+    curl -fsSL -o "$TMP/kimi.zip" "https://github.com/$GITHUB_REPO/releases/download/${ENCODED_TAG}/bxploit-linux-${ARCH_NAME}.zip" || { fail "Download failed"; exit 1; }
     cd "$TMP" && unzip -o kimi.zip 2>/dev/null || { fail "Extract failed"; exit 1; }
     mv kimi "$BINARY" 2>/dev/null || mv kimi-code "$BINARY" 2>/dev/null || { fail "Binary not found"; exit 1; }
     chmod +x "$BINARY"
