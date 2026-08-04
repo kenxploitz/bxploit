@@ -80,7 +80,13 @@ if [ -f "$TMP/bxploit.zip" ]; then
     success "Knowledge: $(find "$BXPLOIT_HOME/knowledge" -name "*.md" 2>/dev/null | wc -l) files"
 fi
 
-# Create CLI Wrapper
+# Generate tui.toml
+cat > "$BXPLOIT_HOME/tui.toml" << 'TUI'
+theme = "auto"
+TUI
+success "tui.toml generated"
+
+# Create CLI Wrapper (with auto-setup)
 printf "\n  ${CYAN}─────────────────────────────────────────────${NC}\n"
 printf "  ${BOLD}Setup CLI${NC}\n"
 printf "  ${CYAN}─────────────────────────────────────────────${NC}\n\n"
@@ -90,13 +96,16 @@ cat > "$CLI_BIN" << 'WRAPPER'
 #!/bin/sh
 BXPLOIT_HOME="${BXPLOIT_HOME:-$HOME/.bxploit}"
 export BXPLOIT_HOME="$BXPLOIT_HOME"
+export KIMI_CODE_HOME="$BXPLOIT_HOME"
 BXPLOIT_BIN="$BXPLOIT_HOME/bin/bxploit"
-[ ! -f "$BXPLOIT_BIN" ] && echo "Error: bxploit not installed" && exit 1
+[ ! -f "$BXPLOIT_BIN" ] && echo "Error: bxploit not installed. Run install.sh" && exit 1
 clear
 printf '\033]0;Bxploit\007'
+
+# Handle special flags
 case "$1" in
     --setup|-s) exec sh "$BXPLOIT_HOME/scripts/setup.sh" "$@" ;;
-    --config|-c) cat "$BXPLOIT_HOME/config.toml" 2>/dev/null || echo "No config"; exit 0 ;;
+    --config|-c) cat "$BXPLOIT_HOME/config.toml" 2>/dev/null || echo "No config. Run: bxploit --setup"; exit 0 ;;
     --test|-t)
         BASE_URL=$(grep 'base_url' "$BXPLOIT_HOME/config.toml" 2>/dev/null | head -1 | sed 's/.*= *"\(.*\)"/\1/')
         API_KEY=$(grep 'api_key' "$BXPLOIT_HOME/config.toml" 2>/dev/null | head -1 | sed 's/.*= *"\(.*\)"/\1/')
@@ -104,9 +113,30 @@ case "$1" in
         exit 0 ;;
     --uninstall) exec sh "$BXPLOIT_HOME/scripts/uninstall.sh" ;;
     --update|-u) exec sh "$BXPLOIT_HOME/scripts/update.sh" ;;
-    --help|-h) echo "BXPLOIT — AI Pentest Framework"; echo "Usage: bxploit [-p query|--setup|--config|--test|--update|--uninstall|--help]"; exit 0 ;;
+    --help|-h)
+        echo "BXPLOIT — AI-Powered Penetration Testing Framework"
+        echo ""
+        echo "Usage: bxploit [options]"
+        echo "  bxploit              Interactive mode"
+        echo "  bxploit -p \"query\"   Single query"
+        echo "  bxploit --setup      Setup API"
+        echo "  bxploit --config     Show config"
+        echo "  bxploit --test       Test connection"
+        echo "  bxploit --update     Update bxploit"
+        echo "  bxploit --uninstall  Remove bxploit"
+        exit 0 ;;
 esac
-[ ! -f "$BXPLOIT_HOME/config.toml" ] && echo "Run: bxploit --setup" && exit 1
+
+# Auto-setup: if config missing, run setup wizard
+if [ ! -f "$BXPLOIT_HOME/config.toml" ]; then
+    echo "Config belum ada. Running setup..."
+    exec sh "$BXPLOIT_HOME/scripts/setup.sh"
+fi
+
+# Auto-generate tui.toml if missing
+[ ! -f "$BXPLOIT_HOME/tui.toml" ] && echo 'theme = "auto"' > "$BXPLOIT_HOME/tui.toml"
+
+# Run with yolo mode (unless using -p flag)
 HAS_PROMPT=0; for a in "$@"; do [ "$a" = "-p" ] && HAS_PROMPT=1; done
 if [ "$HAS_PROMPT" = "1" ]; then exec "$BXPLOIT_BIN" "$@"; else exec "$BXPLOIT_BIN" --yolo "$@"; fi
 WRAPPER
@@ -118,14 +148,30 @@ if ! echo "$PATH" | tr ':' '\n' | grep -q "^$HOME/.local/bin$"; then
     info "Added to PATH"
 fi
 
+# Verify
+printf "\n  ${CYAN}─────────────────────────────────────────────${NC}\n"
+printf "  ${BOLD}Verify${NC}\n"
+printf "  ${CYAN}─────────────────────────────────────────────${NC}\n\n"
+
 [ -f "$BINARY" ] && [ -x "$BINARY" ] && success "Binary OK" || fail "Binary missing"
 [ -f "$CLI_BIN" ] && success "CLI OK" || fail "CLI missing"
+[ -d "$BXPLOIT_HOME/skills" ] && success "Skills OK" || warn "Skills missing"
+[ -d "$BXPLOIT_HOME/knowledge" ] && success "Knowledge OK" || warn "Knowledge missing"
 
+# Auto-run setup
 printf "\n  ${GREEN}═══════════════════════════════════════════════════${NC}\n"
 printf "  ${BOLD}  BXPLOIT Installed!${NC}\n"
 printf "  ${GREEN}═══════════════════════════════════════════════════${NC}\n\n"
-printf "  ${CYAN}Setup API:${NC}  bxploit --setup\n"
-printf "  ${CYAN}Run:${NC}        bxploit\n"
-printf "  ${CYAN}Update:${NC}     bxploit --update\n"
-printf "  ${CYAN}Uninstall:${NC}  bxploit --uninstall\n\n"
-printf "  ${YELLOW}source %s && bxploit --setup${NC}\n\n" "$SHELL_RC"
+
+if [ ! -f "$BXPLOIT_HOME/config.toml" ]; then
+    printf "  ${YELLOW}Setup API sekarang? [Y/n]:${NC} "
+    read -r run_setup
+    case "$run_setup" in
+        n|N) printf "  ${CYAN}Jalankan manual: bxploit --setup${NC}\n" ;;
+        *) exec sh "$BXPLOIT_HOME/scripts/setup.sh" ;;
+    esac
+else
+    printf "  ${CYAN}Config sudah ada. Jalankan: bxploit${NC}\n"
+fi
+
+printf "\n  ${YELLOW}source %s${NC}\n\n" "$SHELL_RC"

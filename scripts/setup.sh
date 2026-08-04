@@ -39,6 +39,11 @@ case "$choice" in
     *) BASE_URL="http://localhost:20128/v1" ;;
 esac
 
+if [ -z "$BASE_URL" ]; then
+    BASE_URL="http://localhost:20128/v1"
+    printf "${YELLOW}[!] Default ke 9router: $BASE_URL${NC}\n"
+fi
+
 # API Key
 printf "\n${GREEN}[?] API Key: ${NC}"
 read -r API_KEY
@@ -65,6 +70,7 @@ printf "${YELLOW}[*] Fetching available models...${NC}\n"
 
 MODELS_RESPONSE=$(curl -s -m 10 "$BASE_URL/models" -H "Authorization: Bearer $API_KEY" 2>/dev/null)
 
+MODEL=""
 if echo "$MODELS_RESPONSE" | grep -q '"data"'; then
     printf "${GREEN}[+] Models found!${NC}\n"
     MODEL_LIST=$(echo "$MODELS_RESPONSE" | python3 -c "
@@ -75,7 +81,7 @@ try:
     for i, m in enumerate(models, 1):
         print(f'{i}) {m}')
 except:
-    print('0) (gagal parse models)')
+    print('')
 " 2>/dev/null)
 
     if [ -n "$MODEL_LIST" ]; then
@@ -84,45 +90,48 @@ except:
         printf "\n${GREEN}Pilih model (nomor atau nama): ${NC}"
         read -r MODEL_CHOICE
 
-        if echo "$MODEL_CHOICE" | grep -q '^[0-9]\+$'; then
-            MODEL=$(echo "$MODEL_LIST" | sed -n "${MODEL_CHOICE}p" | sed 's/^[0-9]*) //')
-        else
-            MODEL="$MODEL_CHOICE"
+        if [ -n "$MODEL_CHOICE" ]; then
+            if echo "$MODEL_CHOICE" | grep -q '^[0-9]\+$'; then
+                MODEL=$(echo "$MODEL_LIST" | sed -n "${MODEL_CHOICE}p" | sed 's/^[0-9]*) //')
+            else
+                MODEL="$MODEL_CHOICE"
+            fi
         fi
-    else
-        printf "${YELLOW}[!] Gagal parse models. Masukin manual.${NC}\n"
-        printf "${GREEN}Model name: ${NC}"
-        read -r MODEL
     fi
-else
-    printf "${YELLOW}[!] Gagal fetch models. Masukin manual.${NC}\n"
-    printf "${GREEN}Model name (contoh: combo/combo/deepseek-v4-pro): ${NC}"
+fi
+
+# Fallback: manual input or default
+if [ -z "$MODEL" ]; then
+    printf "${YELLOW}[!] Gagal fetch models atau gak ada pilihan.${NC}\n"
+    printf "${GREEN}Model name (contoh: mimo-v2.5-pro, gpt-4o): ${NC}"
     read -r MODEL
 fi
 
+# Final fallback: default model
 if [ -z "$MODEL" ]; then
-    MODEL="tumpuk/mimo-v2.5-pro"
+    MODEL="mimo-v2.5-pro"
+    printf "${YELLOW}[!] Pake default: $MODEL${NC}\n"
 fi
 
 printf "\n${GREEN}[+] Selected model: $MODEL${NC}\n"
 
-# Save config in Kimi Code TOML format
+# Generate config
 mkdir -p "$BXPLOIT_HOME"
 
-# Generate provider name (sanitize for TOML)
-PROVIDER_NAME="custom"
+# Sanitize model name for TOML key (replace / with -)
+MODEL_KEY=$(echo "$MODEL" | sed 's|/|-|g')
 
 cat > "$CONFIG_FILE" << EOF
-default_model = "$MODEL"
+default_model = "$MODEL_KEY"
 default_permission_mode = "yolo"
 
-[providers.$PROVIDER_NAME]
+[providers.custom]
 type = "$PROVIDER_TYPE"
 base_url = "$BASE_URL"
 api_key = "$API_KEY"
 
-[models."$MODEL"]
-provider = "$PROVIDER_NAME"
+[models."$MODEL_KEY"]
+provider = "custom"
 model = "$MODEL"
 max_context_size = 999999999
 max_input_size = 999999999
@@ -132,16 +141,32 @@ EOF
 
 chmod 600 "$CONFIG_FILE"
 
-# Copy setup script for later use
+# Generate tui.toml
+cat > "$BXPLOIT_HOME/tui.toml" << 'TUI'
+theme = "auto"
+TUI
+
+# Copy setup script
 mkdir -p "$BXPLOIT_HOME/scripts"
 cp "$0" "$BXPLOIT_HOME/scripts/setup.sh" 2>/dev/null
 
-# Mask API key for display
+# Mask API key
 MASKED=$(echo "$API_KEY" | cut -c1-8)"..."$(echo "$API_KEY" | rev | cut -c1-4 | rev)
 
-printf "\n${GREEN}[✓] Config saved to: $CONFIG_FILE${NC}\n"
+printf "\n${GREEN}[✓] Config saved${NC}\n"
 printf "${GREEN}[✓] Provider: $PROVIDER_TYPE${NC}\n"
 printf "${GREEN}[✓] Model: $MODEL${NC}\n"
 printf "${GREEN}[✓] Base URL: $BASE_URL${NC}\n"
 printf "${GREEN}[✓] API Key: $MASKED${NC}\n"
+
+# Test connection
+printf "\n${YELLOW}[*] Testing connection...${NC}\n"
+TEST_RESULT=$(curl -s -m 10 "$BASE_URL/models" -H "Authorization: Bearer $API_KEY" 2>/dev/null)
+if echo "$TEST_RESULT" | grep -q '"data"'; then
+    COUNT=$(echo "$TEST_RESULT" | python3 -c "import sys,json; print(len(json.load(sys.stdin).get('data',[])))" 2>/dev/null)
+    printf "${GREEN}[✓] Connected! $COUNT models available${NC}\n"
+else
+    printf "${YELLOW}[!] Connection test failed (config saved anyway)${NC}\n"
+fi
+
 printf "\n${CYAN}Jalankan: bxploit${NC}\n"
