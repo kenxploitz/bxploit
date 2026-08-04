@@ -7,10 +7,6 @@ BXPLOIT_BIN="$BXPLOIT_HOME/bin/kimi-code"
 [ ! -f "$BXPLOIT_BIN" ] && echo "Error: bxploit not installed" && exit 1
 clear
 printf '\033]0;Bxploit\007'
-
-# Block models.dev catalog fetch
-export MODELS_DEV_URL="http://0.0.0.0:0"
-
 case "$1" in
     --setup|-s) exec sh "$BXPLOIT_HOME/scripts/setup.sh" "$@" ;;
     --config|-c) cat "$BXPLOIT_HOME/config.toml" 2>/dev/null || echo "No config"; exit 0 ;;
@@ -20,5 +16,6 @@ case "$1" in
     --help|-h) echo "BXPLOIT — AI Pentest Framework"; echo "Usage: bxploit [-p query|--setup|--config|--test|--update|--uninstall|--help]"; exit 0 ;;
 esac
 [ ! -f "$BXPLOIT_HOME/config.toml" ] && echo "Run: bxploit --setup" && exit 1
+# Check if -p flag is used, if so don't add --yolo
 HAS_PROMPT=0; for a in "$@"; do [ "$a" = "-p" ] && HAS_PROMPT=1; done
 if [ "$HAS_PROMPT" = "1" ]; then exec "$BXPLOIT_BIN" "$@"; else exec "$BXPLOIT_BIN" --yolo "$@"; fi
