@@ -1,5 +1,4 @@
 #!/bin/sh
-# BXPLOIT Installer
 set -e
 
 RED='\033[0;31m' GREEN='\033[0;32m' YELLOW='\033[1;33m' CYAN='\033[0;36m' BOLD='\033[1m' NC='\033[0m'
@@ -26,23 +25,19 @@ printf "\n"
 printf "  ${BOLD}AI-Powered Penetration Testing Framework${NC}\n"
 printf "  ${CYAN}No talk, all walk. Let's cook.${NC}\n\n"
 
-# Arch
 ARCH="$(uname -m)"
 case "$ARCH" in x86_64|amd64) ARCH_NAME="x64" ;; aarch64|arm64) ARCH_NAME="arm64" ;; *) fail "Unsupported: $ARCH" ;; esac
 info "Platform: linux ($ARCH_NAME)"
 
-# Prereqs
 command -v curl >/dev/null 2>&1 || fail "curl not found"
 command -v unzip >/dev/null 2>&1 || { apt-get install -y unzip 2>/dev/null || apk add unzip 2>/dev/null || true; }
 command -v python3 >/dev/null 2>&1 || { apt-get install -y python3 2>/dev/null || apk add python3 2>/dev/null || true; }
 success "Prerequisites OK"
 
-# Shell RC
 SHELL_RC=""
 for rc in "$HOME/.zshrc" "$HOME/.bashrc" "$HOME/.bash_profile" "$HOME/.profile"; do [ -f "$rc" ] && SHELL_RC="$rc" && break; done
 [ -z "$SHELL_RC" ] && SHELL_RC="$HOME/.profile" && touch "$SHELL_RC"
 
-# Binary
 mkdir -p "$BXPLOIT_HOME/bin"
 BINARY="$BXPLOIT_HOME/bin/kimi-code"
 
@@ -57,21 +52,16 @@ if [ ! -f "$BINARY" ]; then
     mv kimi "$BINARY" 2>/dev/null || mv kimi-code "$BINARY" 2>/dev/null || fail "Binary not found"
     chmod +x "$BINARY"
     rm -rf "$TMP"
-    
-    # Patch welcome message
-    info "Patching..."
     python3 -c "
 with open('$BINARY','rb') as f: d=f.read()
 d=d.replace(b'Welcome to Kimi Code!',b'Welcome to Bxploit! ')
 with open('$BINARY','wb') as f: f.write(d)
-" 2>/dev/null || warn "Patch failed"
-    
+" 2>/dev/null || true
     success "Binary installed"
 else
     success "Binary exists"
 fi
 
-# Assets
 info "Downloading assets..."
 TMP=$(mktemp -d)
 curl -fsSL -o "$TMP/bxploit.zip" "https://github.com/$BXPLOIT_REPO/archive/refs/heads/main.zip" 2>/dev/null || { warn "Assets failed"; rm -rf "$TMP"; }
@@ -86,10 +76,10 @@ if [ -f "$TMP/bxploit.zip" ]; then
     [ -f "$SRC/AGENTS.md" ] && cp "$SRC/AGENTS.md" "$BXPLOIT_HOME/AGENTS.md"
     for s in bxploit.sh setup.sh update.sh uninstall.sh; do [ -f "$SRC/scripts/$s" ] && cp "$SRC/scripts/$s" "$BXPLOIT_HOME/scripts/" 2>/dev/null; done
     rm -rf "$TMP"
-    success "Assets: $(find "$BXPLOIT_HOME/skills" -name "*.md" 2>/dev/null | wc -l) skills, $(find "$BXPLOIT_HOME/knowledge" -name "*.md" 2>/dev/null | wc -l) knowledge"
+    success "Skills: $(find "$BXPLOIT_HOME/skills" -name "*.md" 2>/dev/null | wc -l) files"
+    success "Knowledge: $(find "$BXPLOIT_HOME/knowledge" -name "*.md" 2>/dev/null | wc -l) files"
 fi
 
-# CLI wrapper
 mkdir -p "$(dirname "$CLI_BIN")"
 cat > "$CLI_BIN" << 'WRAPPER'
 #!/bin/sh
@@ -104,7 +94,10 @@ printf '\033]0;Bxploit\007'
 case "$1" in
     --setup|-s) exec sh "$BXPLOIT_HOME/scripts/setup.sh" "$@" ;;
     --config|-c) cat "$BXPLOIT_HOME/config.toml" 2>/dev/null || echo "No config"; exit 0 ;;
-    --test|-t) curl -s -m 10 "$(grep base_url "$BXPLOIT_HOME/config.toml"|sed 's/.*"//;s/".*//')/models" -H "Authorization: Bearer $(grep api_key "$BXPLOIT_HOME/config.toml"|sed 's/.*"//;s/".*//')"|python3 -c "import sys,json;print(f'OK: {len(json.load(sys.stdin).get(\"data\",[]))} models')" 2>/dev/null||echo "Failed";exit 0 ;;
+    --test|-t)
+        BASE_URL=$(grep 'base_url' "$BXPLOIT_HOME/config.toml" 2>/dev/null | head -1 | sed 's/.*= *"\(.*\)"/\1/')
+        API_KEY=$(grep 'api_key' "$BXPLOIT_HOME/config.toml" 2>/dev/null | head -1 | sed 's/.*= *"\(.*\)"/\1/')
+        curl -s -m 10 "$BASE_URL/models" -H "Authorization: Bearer $API_KEY" | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'OK: {len(d.get(\"data\",[]))} models')" 2>/dev/null || echo "Failed"; exit 0 ;;
     --uninstall) exec sh "$BXPLOIT_HOME/scripts/uninstall.sh" ;;
     --update|-u) exec sh "$BXPLOIT_HOME/scripts/update.sh" ;;
     --help|-h) echo "BXPLOIT — AI Pentest Framework"; echo "Usage: bxploit [-p query|--setup|--config|--test|--update|--uninstall|--help]"; exit 0 ;;
@@ -116,13 +109,11 @@ WRAPPER
 chmod +x "$CLI_BIN"
 success "CLI: $CLI_BIN"
 
-# PATH
 if ! echo "$PATH" | tr ':' '\n' | grep -q "^$HOME/.local/bin$"; then
     grep -qF "$MARKER" "$SHELL_RC" 2>/dev/null || printf "\n%s\nexport PATH=\"\$HOME/.local/bin:\$PATH\"\n" "$MARKER" >> "$SHELL_RC"
     info "Added to PATH"
 fi
 
-# Verify
 [ -f "$BINARY" ] && success "Binary OK" || fail "Binary missing"
 [ -f "$CLI_BIN" ] && success "CLI OK" || fail "CLI missing"
 
