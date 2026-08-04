@@ -192,6 +192,12 @@ download_assets() {
 
 # --- Setup Wizard (auto-detect if env vars set) -------------------------
 setup_wizard() {
+    # Skip if config already exists
+    if [ -f "$CONFIG_FILE" ]; then
+        info "Config already exists, skipping setup"
+        return 0
+    fi
+
     # If API env vars set, auto-generate config
     if [ -n "$BXPLOIT_API_KEY" ]; then
         info "Using API key from env..."
