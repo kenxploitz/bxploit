@@ -1,12 +1,12 @@
 #!/bin/sh
 # ============================================================================
-# Bungul Exploit (bxploit) — Standalone Uninstaller
-# Usage: sh uninstall.sh
+# Bungul Exploit (bxploit) — Full Uninstaller
+# Usage: bxploit --uninstall
+#        sh uninstall.sh
 # ============================================================================
 
 set -e
 
-# --- Colors ---------------------------------------------------------------
 if command -v tput >/dev/null 2>&1 && [ -t 1 ]; then
     RED=$(tput setaf 1) GREEN=$(tput setaf 2) YELLOW=$(tput setaf 3)
     CYAN=$(tput setaf 6) BOLD=$(tput bold) RESET=$(tput sgr0)
@@ -16,126 +16,155 @@ fi
 
 BXPLOIT_HOME="${BXPLOIT_HOME:-$HOME/.bxploit}"
 CLI_BIN="$HOME/.local/bin/bxploit"
-SKILLS_DIR="$BXPLOIT_HOME/skills"
-KNOWLEDGE_DIR="$BXPLOIT_HOME/knowledge"
-PLUGINS_DIR="$BXPLOIT_HOME/plugins"
-MARKER="# Bungul Exploit"
+KIMI_SYMLINK="$HOME/.kimi-code"
+MARKER="# Bxploit"
 
-info()  { printf "%s[INFO]%s  %s\n" "$CYAN" "$RESET" "$1"; }
-ok()    { printf "%s[OK]%s    %s\n" "$GREEN" "$RESET" "$1"; }
-warn()  { printf "%s[WARN]%s  %s\n" "$YELLOW" "$RESET" "$1"; }
+info()    { printf "  ${GREEN}[+]${NC} %s\n" "$1"; }
+warn()    { printf "  ${YELLOW}[!]${NC} %s\n" "$1"; }
+success() { printf "  ${GREEN}[✓]${NC} %s\n" "$1"; }
 
-# --- Banner ---------------------------------------------------------------
-printf '%s' "$RED"
-cat << 'BANNER'
+# Banner
+printf "\n"
+printf "  ${RED}██████╗ ██╗  ██╗██████╗ ██╗      ██████╗ ██╗████████╗${NC}\n"
+printf "  ${RED}██╔══██╗╚██╗██╔╝██╔══██╗██║     ██╔═══██╗██║╚══██╔══╝${NC}\n"
+printf "  ${RED}██████╔╝ ╚███╔╝ ██████╔╝██║     ██║   ██║██║   ██║${NC}\n"
+printf "  ${RED}██╔══██╗ ██╔██╗ ██╔═══╝ ██║     ██║   ██║██║   ██║${NC}\n"
+printf "  ${RED}██████╔╝██╔╝ ██╗██║     ███████╗╚██████╔╝██║   ██║${NC}\n"
+printf "  ${RED}╚═════╝ ╚═╝  ╚═╝╚═╝     ╚══════╝ ╚═════╝ ╚═╝   ╚═╝${NC}\n"
+printf "\n"
+printf "  ${BOLD}FULL UNINSTALLER${NC}\n\n"
 
- ██████╗ ██╗  ██╗██████╗ ██╗      ██████╗ ██╗████████╗
- ██╔══██╗╚██╗██╔╝██╔══██╗██║     ██╔═══██╗██║╚══██╔══╝
- ██████╔╝ ╚███╔╝ ██████╔╝██║     ██║   ██║██║   ██║
- ██╔══██╗ ██╔██╗ ██╔═══╝ ██║     ██║   ██║██║   ██║
- ██████╔╝██╔╝ ██╗██║     ███████╗╚██████╔╝██║   ██║
- ╚═════╝ ╚═╝  ╚═╝╚═╝     ╚══════╝ ╚═════╝ ╚═╝   ╚═╝
-              U N I N S T A L L E R
-
-BANNER
-printf '%s\n' "$RESET"
-
-# --- List What Will Be Removed --------------------------------------------
-printf "%sYang akan dihapus:%s\n" "$BOLD" "$RESET"
-printf "  1. %s%s/%s                 (config, venv, agent)\n" "$YELLOW" "$BXPLOIT_HOME" "$RESET"
-printf "  2. %s%s%s           (CLI wrapper)\n" "$YELLOW" "$CLI_BIN" "$RESET"
-printf "  3. %s%s%s       (skills)\n" "$YELLOW" "$SKILLS_DIR" "$RESET"
-printf "  4. %s%s%s   (knowledge)\n" "$YELLOW" "$KNOWLEDGE_DIR" "$RESET"
-printf "  5. %s%s%s      (plugins)\n" "$YELLOW" "$PLUGINS_DIR" "$RESET"
-printf "  6. PATH entries in shell RC files\n"
+# List what will be removed
+printf "  ${CYAN}Yang akan dihapus:${NC}\n\n"
+printf "  ${YELLOW}[1]${NC} $BXPLOIT_HOME/              (config, binary, skills, knowledge, plugins)\n"
+printf "  ${YELLOW}[2]${NC} $CLI_BIN                    (CLI wrapper)\n"
+printf "  ${YELLOW}[3]${NC} $KIMI_SYMLINK               (symlink)\n"
+printf "  ${YELLOW}[4]${NC} /tmp/bxploit*               (temp files)\n"
+printf "  ${YELLOW}[5]${NC} PATH entries in shell RC    (.bashrc, .zshrc, .profile)\n"
+printf "  ${YELLOW}[6]${NC} Source repos (optional)     (~/bxploit, ~/bxploit-source)\n"
 printf "\n"
 
-# --- Confirm --------------------------------------------------------------
-printf "%sYakin mau uninstall Bungul Exploit? [y/N]:%s " "$BOLD" "$RESET"
+# Confirm
+printf "  ${BOLD}Yakin mau hapus SEMUA? [y/N]:${NC} "
 read -r confirm
 case "$confirm" in
     y|Y|yes|YES) ;;
-    *) printf "Batal. Bxploit tetap terinstall.\n"; exit 0 ;;
+    *) printf "  Batal.\n"; exit 0 ;;
 esac
 
-# --- Remove bxploit home directory ----------------------------------------
+# ── Remove bxploit home ──
+printf "\n  ${CYAN}─────────────────────────────────────────────${NC}\n"
+printf "  ${BOLD}Remove Files${NC}\n"
+printf "  ${CYAN}─────────────────────────────────────────────${NC}\n\n"
+
 if [ -d "$BXPLOIT_HOME" ]; then
     rm -rf "$BXPLOIT_HOME"
-    ok "Removed $BXPLOIT_HOME"
+    success "Removed $BXPLOIT_HOME"
 else
     warn "$BXPLOIT_HOME not found"
 fi
 
-# --- Remove CLI wrapper ---------------------------------------------------
+# ── Remove CLI wrapper ──
 if [ -f "$CLI_BIN" ]; then
     rm -f "$CLI_BIN"
-    ok "Removed $CLI_BIN"
+    success "Removed $CLI_BIN"
 else
     warn "$CLI_BIN not found"
 fi
 
-# --- Clean Shell RC Files -------------------------------------------------
-info "Cleaning shell RC files ..."
+# ── Remove symlink ──
+if [ -L "$KIMI_SYMLINK" ]; then
+    rm -f "$KIMI_SYMLINK"
+    success "Removed symlink $KIMI_SYMLINK"
+elif [ -d "$KIMI_SYMLINK" ]; then
+    warn "$KIMI_SYMLINK is a real directory (not symlink), skipping"
+fi
+
+# ── Remove temp files ──
+if ls /tmp/bxploit* 2>/dev/null; then
+    rm -rf /tmp/bxploit*
+    success "Removed /tmp/bxploit*"
+fi
+
+# ── Clean Shell RC Files ──
+printf "\n  ${CYAN}─────────────────────────────────────────────${NC}\n"
+printf "  ${BOLD}Clean Shell RC${NC}\n"
+printf "  ${CYAN}─────────────────────────────────────────────${NC}\n\n"
 
 for rc in "$HOME/.bashrc" "$HOME/.zshrc" "$HOME/.bash_profile" "$HOME/.profile"; do
     if [ ! -f "$rc" ]; then
         continue
     fi
 
-    if grep -qF "# Bungul Exploit" "$rc" 2>/dev/null || grep -qi "bxploit" "$rc" 2>/dev/null; then
+    if grep -qF "$MARKER" "$rc" 2>/dev/null || grep -qi "bxploit" "$rc" 2>/dev/null || grep -qi "BXPLOIT_HOME" "$rc" 2>/dev/null; then
         tmpfile=$(mktemp)
-
-        # Remove lines containing our marker or bxploit references
-        grep -vF "# Bungul Exploit" "$rc" 2>/dev/null | \
+        grep -vF "$MARKER" "$rc" 2>/dev/null | \
         grep -vi "bxploit" | \
-        grep -vi "BXPLOIT_HOME" > "$tmpfile" 2>/dev/null || true
-
-        # Remove trailing blank lines
+        grep -vi "BXPLOIT_HOME" | \
+        grep -vi "# Bungul Exploit" > "$tmpfile" 2>/dev/null || true
         sed -e :a -e '/^\n*$/{$d;N;ba' -e '}' "$tmpfile" > "$rc" 2>/dev/null || cp "$tmpfile" "$rc"
         rm -f "$tmpfile"
-
-        ok "Cleaned $rc"
+        success "Cleaned $rc"
     else
-        printf "  %s✓%s %s (no bxploit entries)\n" "$GREEN" "$RESET" "$rc"
+        printf "  ${GREEN}[✓]${NC} %s (clean)\n" "$rc"
     fi
 done
 
-# --- Optional: Remove Source Repository -----------------------------------
-SOURCE_DIR=""
-for dir in "$HOME/bxploit" "$HOME/bxploit-agent" "$HOME/bungul-exploit" "$HOME/bxploit-src"; do
-    if [ -d "$dir/.git" ] || [ -d "$dir/scripts" ]; then
-        SOURCE_DIR="$dir"
-        break
+# ── Remove Source Repos ──
+printf "\n  ${CYAN}─────────────────────────────────────────────${NC}\n"
+printf "  ${BOLD}Source Repos${NC}\n"
+printf "  ${CYAN}─────────────────────────────────────────────${NC}\n\n"
+
+FOUND_REPOS=""
+for dir in "$HOME/bxploit" "$HOME/bxploit-source" "$HOME/bxploit-agent" "$HOME/bungul-exploit" "$HOME/bxploit-src" "/tmp/bxploit-release"; do
+    if [ -d "$dir" ]; then
+        FOUND_REPOS="$FOUND_REPOS $dir"
     fi
 done
 
-if [ -n "$SOURCE_DIR" ]; then
-    printf "\n%sHapus source repo (%s)? [y/N]:%s " "$YELLOW" "$SOURCE_DIR" "$RESET"
+if [ -n "$FOUND_REPOS" ]; then
+    printf "  ${YELLOW}Ditemukan:${NC}\n"
+    for repo in $FOUND_REPOS; do
+        printf "    - %s\n" "$repo"
+    done
+    printf "\n  ${BOLD}Hapus semua source repo? [y/N]:${NC} "
     read -r rm_src
     case "$rm_src" in
         y|Y|yes|YES)
-            rm -rf "$SOURCE_DIR"
-            ok "Removed source repo: $SOURCE_DIR"
+            for repo in $FOUND_REPOS; do
+                rm -rf "$repo"
+                success "Removed $repo"
+            done
             ;;
         *)
-            info "Source repo kept at $SOURCE_DIR"
+            info "Source repos kept"
             ;;
     esac
+else
+    info "No source repos found"
 fi
 
-# --- Done -----------------------------------------------------------------
+# ── Kill any running processes ──
+if pgrep -f "kimi-code" >/dev/null 2>&1; then
+    printf "\n  ${YELLOW}[!]${NC} Killing running bxploit processes...\n"
+    pkill -9 -f "kimi-code" 2>/dev/null || true
+    success "Processes killed"
+fi
+
+# ── Done ──
 printf "\n"
-printf "%s═══════════════════════════════════════════════════%s\n" "$GREEN" "$RESET"
-printf "%s✓ Bungul Exploit berhasil di-uninstall!%s\n" "$GREEN" "$RESET"
-printf "%s═══════════════════════════════════════════════════%s\n" "$GREEN" "$RESET"
-printf "\n"
-printf "%sJangan lupa source RC file lo:%s\n" "$YELLOW" "$RESET"
+printf "  ${GREEN}═══════════════════════════════════════════════════${NC}\n"
+printf "  ${BOLD}  BXPLOIT Fully Uninstalled!${NC}\n"
+printf "  ${GREEN}═══════════════════════════════════════════════════${NC}\n\n"
 
 CURRENT_SHELL="$(basename "${SHELL:-/bin/sh}")"
+printf "  ${YELLOW}Source RC file lo:${NC}\n"
 case "$CURRENT_SHELL" in
-    zsh)  printf "  source ~/.zshrc\n" ;;
-    bash) printf "  source ~/.bashrc\n" ;;
-    *)    printf "  source ~/.profile\n" ;;
+    zsh)  printf "    source ~/.zshrc\n" ;;
+    bash) printf "    source ~/.bashrc\n" ;;
+    *)    printf "    source ~/.profile\n" ;;
 esac
 
-printf "\nMantap. Sampai jumpa lagi.\n"
+printf "\n  ${CYAN}Reinstall:${NC}\n"
+printf "    curl -fsSL https://raw.githubusercontent.com/kenxploitz/bxploit/main/scripts/install.sh -o /tmp/bxploit.sh && sh /tmp/bxploit.sh\n"
+printf "\n"
