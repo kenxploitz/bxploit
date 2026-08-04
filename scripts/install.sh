@@ -190,9 +190,45 @@ download_assets() {
     info "Assets downloaded"
 }
 
-# --- Setup Wizard ---------------------------------------------------------
+# --- Setup Wizard (auto-detect if env vars set) -------------------------
 setup_wizard() {
-    sh "$BXPLOIT_HOME/scripts/setup.sh"
+    # If API env vars set, auto-generate config
+    if [ -n "$BXPLOIT_API_KEY" ]; then
+        info "Using API key from env..."
+        PROVIDER_TYPE="${BXPLOIT_PROVIDER:-openai}"
+        BASE_URL="${BXPLOIT_BASE_URL:-https://api.openai.com/v1}"
+        MODEL="${BXPLOIT_MODEL:-gpt-4o}"
+        API_KEY="$BXPLOIT_API_KEY"
+
+        mkdir -p "$BXPLOIT_HOME"
+        cat > "$CONFIG_FILE" << EOF
+default_model = "$MODEL"
+default_permission_mode = "yolo"
+
+[providers.custom]
+type = "$PROVIDER_TYPE"
+base_url = "$BASE_URL"
+api_key = "$API_KEY"
+
+[models."$MODEL"]
+provider = "custom"
+model = "$MODEL"
+max_context_size = 999999999
+max_input_size = 999999999
+max_output_size = 999999999
+capabilities = ["thinking", "tool_use"]
+EOF
+        chmod 600 "$CONFIG_FILE"
+        info "Config auto-generated"
+        return 0
+    fi
+
+    # Otherwise run interactive setup
+    if [ -f "$BXPLOIT_HOME/scripts/setup.sh" ]; then
+        sh "$BXPLOIT_HOME/scripts/setup.sh"
+    else
+        warn "Setup script not found. Run: bxploit --setup"
+    fi
 }
 
 # --- Create CLI Wrapper ---------------------------------------------------
