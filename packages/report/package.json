@@ -1,0 +1,16 @@
+{
+  "name": "@bxploit/report",
+  "version": "1.0.0",
+  "description": "Bxploit CVSS 3.1 Report Generator",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "keywords": ["pentest", "cvss", "report", "security"],
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^5.3.0"
+  }
+}
