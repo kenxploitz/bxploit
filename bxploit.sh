@@ -311,7 +311,7 @@ do_test() {
     fi
 }
 
-do_update() {
+# do_update is in scripts/update.sh
     banner
     printf "  ${BOLD}UPDATING BXPLOIT...${NC}\n\n"
     CUR_VER=$("$BINARY" --version 2>/dev/null || echo "unknown")
@@ -352,7 +352,7 @@ do_uninstall() {
 # Entry point
 case "$1" in
     --uninstall) do_uninstall ;;
-    --update) do_update ;;
+    --update) exec sh "$INSTALL_DIR/scripts/update.sh" ;;
     --setup) do_setup ;;
     --help|-h)
         banner
