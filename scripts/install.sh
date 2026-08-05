@@ -49,8 +49,8 @@ if [ -f "$BINARY" ] && [ -x "$BINARY" ]; then
 else
     info "Downloading Bxploit binary..."
     TMP_DIR=$(mktemp -d)
-    curl -fsSL -o "$TMP_DIR/bxploit.zip" "https://github.com/$BXPLOIT_REPO/releases/download/v1.0.0/bxploit-linux-${ARCH_NAME}.zip" || fail "Download failed"
-    cd "$TMP_DIR" && unzip -o bxploit.zip 2>/dev/null || fail "Extract failed"
+    curl -fsSL -o "$TMP_DIR/bxploit.zip" "https://github.com/$BXPLOIT_REPO/releases/download/v1.0.0/bxploit-linux-${ARCH_NAME}" || fail "Download failed"
+    cd "$TMP_DIR" &&  || fail "Extract failed"
     mv kimi "$BINARY" 2>/dev/null || mv bxploit "$BINARY" 2>/dev/null || fail "Binary not found"
     chmod +x "$BINARY"
     rm -rf "$TMP_DIR"
@@ -66,7 +66,7 @@ info "Downloading assets..."
 TMP=$(mktemp -d)
 curl -fsSL -o "$TMP/bxploit.zip" "https://github.com/$BXPLOIT_REPO/archive/refs/heads/main.zip" 2>/dev/null || { warn "Assets failed"; rm -rf "$TMP"; }
 if [ -f "$TMP/bxploit.zip" ]; then
-    cd "$TMP" && unzip -o bxploit.zip 2>/dev/null
+    cd "$TMP" && 
     SRC="$TMP/bxploit-main"
     mkdir -p "$BXPLOIT_HOME/skills" "$BXPLOIT_HOME/knowledge" "$BXPLOIT_HOME/plugins" "$BXPLOIT_HOME/scripts"
     [ -d "$SRC/plugins/bxploit-pentest/skills" ] && cp -r "$SRC/plugins/bxploit-pentest/skills/"* "$BXPLOIT_HOME/skills/" 2>/dev/null

@@ -21,8 +21,8 @@ case "$ARCH" in x86_64|amd64) ARCH_NAME="x64" ;; aarch64|arm64) ARCH_NAME="arm64
 info "Downloading latest..."
 cp "$BINARY" "$BINARY.bak" 2>/dev/null
 TMP_DIR=$(mktemp -d)
-curl -fsSL -o "$TMP_DIR/bxploit.zip" "https://github.com/$BXPLOIT_REPO/releases/download/v1.0.0/bxploit-linux-${ARCH_NAME}.zip" || fail "Download failed"
-cd "$TMP_DIR" && unzip -o bxploit.zip 2>/dev/null || fail "Extract failed"
+curl -fsSL -o "$TMP_DIR/bxploit.zip" "https://github.com/$BXPLOIT_REPO/releases/download/v1.0.0/bxploit-linux-${ARCH_NAME}" || fail "Download failed"
+ || fail "Extract failed"
 mv kimi "$BINARY" 2>/dev/null || mv bxploit "$BINARY" 2>/dev/null || fail "Binary not found"
 chmod +x "$BINARY"
 rm -rf "$TMP_DIR"
