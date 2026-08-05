@@ -29,6 +29,7 @@ case "$ARCH" in x86_64|amd64) ARCH_NAME="x64" ;; aarch64|arm64) ARCH_NAME="arm64
 info "Platform: linux ($ARCH_NAME)"
 
 command -v curl >/dev/null 2>&1 || fail "curl not found"
+command -v unzip >/dev/null 2>&1 || { apt-get install -y unzip 2>/dev/null || apk add unzip 2>/dev/null || true; }
 success "Prerequisites OK"
 
 SHELL_RC=""
@@ -47,8 +48,12 @@ if [ -f "$BINARY" ] && [ -x "$BINARY" ]; then
     success "Binary exists"
 else
     info "Downloading Bxploit binary..."
-    curl -fsSL -o "$BINARY" "https://github.com/$BXPLOIT_REPO/releases/download/v1.0.0/bxploit-linux-${ARCH_NAME}" || fail "Download failed"
+    TMP_DIR=$(mktemp -d)
+    curl -fsSL -o "$TMP_DIR/bxploit.zip" "https://github.com/$BXPLOIT_REPO/releases/download/v1.0.0/bxploit-linux-${ARCH_NAME}.zip" || fail "Download failed"
+    cd "$TMP_DIR" && unzip -o bxploit.zip 2>/dev/null || fail "Extract failed"
+    mv kimi "$BINARY" 2>/dev/null || fail "Binary not found"
     chmod +x "$BINARY"
+    rm -rf "$TMP_DIR"
     success "Binary installed"
 fi
 
@@ -93,35 +98,19 @@ BXPLOIT_HOME="${BXPLOIT_HOME:-$HOME/.bxploit}"
 export BXPLOIT_HOME="$BXPLOIT_HOME"
 export KIMI_CODE_HOME="$BXPLOIT_HOME"
 BXPLOIT_BIN="$BXPLOIT_HOME/bin/bxploit"
-[ ! -f "$BXPLOIT_BIN" ] && echo "Error: bxploit not installed. Run install.sh" && exit 1
+[ ! -f "$BXPLOIT_BIN" ] && echo "Error: bxploit not installed" && exit 1
 clear
 printf '\033]0;Bxploit\007'
 
 case "$1" in
     --setup|-s) exec sh "$BXPLOIT_HOME/scripts/setup.sh" "$@" ;;
-    --config|-c) cat "$BXPLOIT_HOME/config.toml" 2>/dev/null || echo "No config. Run: bxploit --setup"; exit 0 ;;
-    --test|-t)
-        BASE_URL=$(grep 'base_url' "$BXPLOIT_HOME/config.toml" 2>/dev/null | head -1 | sed 's/.*= *"\(.*\)"/\1/')
-        API_KEY=$(grep 'api_key' "$BXPLOIT_HOME/config.toml" 2>/dev/null | head -1 | sed 's/.*= *"\(.*\)"/\1/')
-        curl -s -m 10 "$BASE_URL/models" -H "Authorization: Bearer $API_KEY" | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'OK: {len(d.get(\"data\",[]))} models')" 2>/dev/null || echo "Failed"
-        exit 0 ;;
+    --config|-c) cat "$BXPLOIT_HOME/config.toml" 2>/dev/null || echo "No config"; exit 0 ;;
+    --test|-t) curl -s -m 10 "$(grep base_url "$BXPLOIT_HOME/config.toml"|sed 's/.*"//;s/".*//')/models" -H "Authorization: Bearer $(grep api_key "$BXPLOIT_HOME/config.toml"|sed 's/.*"//;s/".*//')"|python3 -c "import sys,json;print(f'OK: {len(json.load(sys.stdin).get(\"data\",[]))} models')" 2>/dev/null||echo "Failed";exit 0 ;;
     --uninstall) exec sh "$BXPLOIT_HOME/scripts/uninstall.sh" ;;
     --update|-u) exec sh "$BXPLOIT_HOME/scripts/update.sh" ;;
-    --help|-h)
-        echo "BXPLOIT — AI-Powered Penetration Testing Framework"
-        echo ""
-        echo "Usage: bxploit [options]"
-        echo "  bxploit              Interactive mode"
-        echo "  bxploit -p \"query\"   Single query"
-        echo "  bxploit --setup      Setup API"
-        echo "  bxploit --config     Show config"
-        echo "  bxploit --test       Test connection"
-        echo "  bxploit --update     Update bxploit"
-        echo "  bxploit --uninstall  Remove bxploit"
-        exit 0 ;;
+    --help|-h) echo "BXPLOIT — AI Pentest Framework"; echo "Usage: bxploit [-p query|--setup|--config|--test|--update|--uninstall|--help]"; exit 0 ;;
 esac
 
-# Auto-setup if config missing
 if [ ! -f "$BXPLOIT_HOME/config.toml" ]; then
     echo "Config belum ada. Running setup..."
     exec sh "$BXPLOIT_HOME/scripts/setup.sh"
@@ -139,11 +128,6 @@ if ! echo "$PATH" | tr ':' '\n' | grep -q "^$HOME/.local/bin$"; then
     grep -qF "$MARKER" "$SHELL_RC" 2>/dev/null || printf "\n%s\nexport PATH=\"\$HOME/.local/bin:\$PATH\"\n" "$MARKER" >> "$SHELL_RC"
     info "Added to PATH"
 fi
-
-# Verify
-printf "\n  ${CYAN}─────────────────────────────────────────────${NC}\n"
-printf "  ${BOLD}Verify${NC}\n"
-printf "  ${CYAN}─────────────────────────────────────────────${NC}\n\n"
 
 [ -f "$BINARY" ] && [ -x "$BINARY" ] && success "Binary OK" || fail "Binary missing"
 [ -f "$CLI_BIN" ] && success "CLI OK" || fail "CLI missing"
