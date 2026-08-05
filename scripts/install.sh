@@ -29,7 +29,6 @@ case "$ARCH" in x86_64|amd64) ARCH_NAME="x64" ;; aarch64|arm64) ARCH_NAME="arm64
 info "Platform: linux ($ARCH_NAME)"
 
 command -v curl >/dev/null 2>&1 || fail "curl not found"
-command -v unzip >/dev/null 2>&1 || { apt-get install -y unzip 2>/dev/null || apk add unzip 2>/dev/null || true; }
 success "Prerequisites OK"
 
 SHELL_RC=""
@@ -48,12 +47,8 @@ if [ -f "$BINARY" ] && [ -x "$BINARY" ]; then
     success "Binary exists"
 else
     info "Downloading Bxploit binary..."
-    TMP_DIR=$(mktemp -d)
-    curl -fsSL -o "$TMP_DIR/bxploit.zip" "https://github.com/$BXPLOIT_REPO/releases/download/v1.0.0/bxploit-linux-${ARCH_NAME}" || fail "Download failed"
-    cd "$TMP_DIR" &&  || fail "Extract failed"
-    mv kimi "$BINARY" 2>/dev/null || mv bxploit "$BINARY" 2>/dev/null || fail "Binary not found"
+    curl -fsSL -o "$BINARY" "https://github.com/$BXPLOIT_REPO/releases/download/v1.0.0/bxploit-linux-${ARCH_NAME}" || fail "Download failed"
     chmod +x "$BINARY"
-    rm -rf "$TMP_DIR"
     success "Binary installed"
 fi
 
@@ -66,7 +61,7 @@ info "Downloading assets..."
 TMP=$(mktemp -d)
 curl -fsSL -o "$TMP/bxploit.zip" "https://github.com/$BXPLOIT_REPO/archive/refs/heads/main.zip" 2>/dev/null || { warn "Assets failed"; rm -rf "$TMP"; }
 if [ -f "$TMP/bxploit.zip" ]; then
-    cd "$TMP" && 
+    cd "$TMP" && unzip -o bxploit.zip 2>/dev/null
     SRC="$TMP/bxploit-main"
     mkdir -p "$BXPLOIT_HOME/skills" "$BXPLOIT_HOME/knowledge" "$BXPLOIT_HOME/plugins" "$BXPLOIT_HOME/scripts"
     [ -d "$SRC/plugins/bxploit-pentest/skills" ] && cp -r "$SRC/plugins/bxploit-pentest/skills/"* "$BXPLOIT_HOME/skills/" 2>/dev/null
@@ -86,7 +81,7 @@ theme = "auto"
 TUI
 success "tui.toml generated"
 
-# Create CLI Wrapper (with auto-setup)
+# Create CLI Wrapper
 printf "\n  ${CYAN}─────────────────────────────────────────────${NC}\n"
 printf "  ${BOLD}Setup CLI${NC}\n"
 printf "  ${CYAN}─────────────────────────────────────────────${NC}\n\n"
@@ -102,7 +97,6 @@ BXPLOIT_BIN="$BXPLOIT_HOME/bin/bxploit"
 clear
 printf '\033]0;Bxploit\007'
 
-# Handle special flags
 case "$1" in
     --setup|-s) exec sh "$BXPLOIT_HOME/scripts/setup.sh" "$@" ;;
     --config|-c) cat "$BXPLOIT_HOME/config.toml" 2>/dev/null || echo "No config. Run: bxploit --setup"; exit 0 ;;
@@ -127,16 +121,14 @@ case "$1" in
         exit 0 ;;
 esac
 
-# Auto-setup: if config missing, run setup wizard
+# Auto-setup if config missing
 if [ ! -f "$BXPLOIT_HOME/config.toml" ]; then
     echo "Config belum ada. Running setup..."
     exec sh "$BXPLOIT_HOME/scripts/setup.sh"
 fi
 
-# Auto-generate tui.toml if missing
 [ ! -f "$BXPLOIT_HOME/tui.toml" ] && echo 'theme = "auto"' > "$BXPLOIT_HOME/tui.toml"
 
-# Run with yolo mode (unless using -p flag)
 HAS_PROMPT=0; for a in "$@"; do [ "$a" = "-p" ] && HAS_PROMPT=1; done
 if [ "$HAS_PROMPT" = "1" ]; then exec "$BXPLOIT_BIN" "$@"; else exec "$BXPLOIT_BIN" --yolo "$@"; fi
 WRAPPER
@@ -155,10 +147,7 @@ printf "  ${CYAN}─────────────────────
 
 [ -f "$BINARY" ] && [ -x "$BINARY" ] && success "Binary OK" || fail "Binary missing"
 [ -f "$CLI_BIN" ] && success "CLI OK" || fail "CLI missing"
-[ -d "$BXPLOIT_HOME/skills" ] && success "Skills OK" || warn "Skills missing"
-[ -d "$BXPLOIT_HOME/knowledge" ] && success "Knowledge OK" || warn "Knowledge missing"
 
-# Auto-run setup
 printf "\n  ${GREEN}═══════════════════════════════════════════════════${NC}\n"
 printf "  ${BOLD}  BXPLOIT Installed!${NC}\n"
 printf "  ${GREEN}═══════════════════════════════════════════════════${NC}\n\n"
