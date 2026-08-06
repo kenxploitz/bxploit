@@ -15,31 +15,25 @@ printf "\n  ${BOLD}BXPLOIT UPDATER${NC}\n\n"
 
 [ ! -f "$BINARY" ] && fail "Bxploit not found"
 
-ARCH="$(uname -m)"
-case "$ARCH" in x86_64|amd64) ARCH_NAME="x64" ;; aarch64|arm64) ARCH_NAME="arm64" ;; *) fail "Unsupported" ;; esac
+info "Updating SYSTEM.md (jailbreak)..."
+curl -fsSL "https://raw.githubusercontent.com/$BXPLOIT_REPO/main/plugins/bxploit-pentest/SYSTEM.md" -o "$BXPLOIT_HOME/SYSTEM.md" 2>/dev/null && success "SYSTEM.md updated" || info "SYSTEM.md unchanged"
 
-info "Downloading latest binary..."
-cp "$BINARY" "$BINARY.bak" 2>/dev/null
-TMP_DIR=$(mktemp -d)
-curl -fsSL -o "$TMP_DIR/bxploit.zip" "https://github.com/$BXPLOIT_REPO/releases/download/v1.0.0/bxploit-linux-${ARCH_NAME}.zip" || fail "Download failed"
-cd "$TMP_DIR" && unzip -o bxploit.zip 2>/dev/null || fail "Extract failed"
-mv kimi "$BINARY" 2>/dev/null || fail "Binary not found"
-chmod +x "$BINARY"
-rm -rf "$TMP_DIR"
-success "Binary updated"
+info "Updating skills..."
+mkdir -p "$BXPLOIT_HOME/skills"
+for skill in pentest-core exploit-range osint-deep waf-bypass; do
+    curl -fsSL "https://raw.githubusercontent.com/$BXPLOIT_REPO/main/plugins/bxploit-pentest/skills/$skill.md" -o "$BXPLOIT_HOME/skills/$skill.md" 2>/dev/null && success "  $skill.md" || true
+done
 
-info "Updating assets..."
+info "Updating knowledge base..."
+mkdir -p "$BXPLOIT_HOME/knowledge"
 TMP=$(mktemp -d)
-curl -fsSL -o "$TMP/bxploit.zip" "https://github.com/$BXPLOIT_REPO/archive/refs/heads/main.zip" 2>/dev/null
-if [ -f "$TMP/bxploit.zip" ]; then
-    cd "$TMP" && unzip -o bxploit.zip 2>/dev/null
-    SRC="$TMP/bxploit-main"
-    mkdir -p "$BXPLOIT_HOME/skills" "$BXPLOIT_HOME/knowledge" "$BXPLOIT_HOME/plugins"
-    [ -d "$SRC/plugins/bxploit-pentest/skills" ] && cp -r "$SRC/plugins/bxploit-pentest/skills/"* "$BXPLOIT_HOME/skills/" 2>/dev/null
-    [ -d "$SRC/knowledge" ] && cp -r "$SRC/knowledge/"* "$BXPLOIT_HOME/knowledge/" 2>/dev/null
-    [ -f "$SRC/plugins/bxploit-pentest/SYSTEM.md" ] && cp "$SRC/plugins/bxploit-pentest/SYSTEM.md" "$BXPLOIT_HOME/SYSTEM.md"
+curl -fsSL -o "$TMP/main.zip" "https://github.com/$BXPLOIT_REPO/archive/refs/heads/main.zip" 2>/dev/null
+if [ -f "$TMP/main.zip" ]; then
+    cd "$TMP" && unzip -o main.zip 2>/dev/null
+    [ -d "$TMP/bxploit-main/knowledge" ] && cp -r "$TMP/bxploit-main/knowledge/"* "$BXPLOIT_HOME/knowledge/" 2>/dev/null
     rm -rf "$TMP"
-    success "Assets updated"
+    success "Knowledge base updated"
 fi
 
 printf "\n  ${GREEN}Update Complete!${NC}\n\n"
+printf "  Run ${CYAN}bxploit --update-binary${NC} to update the binary\n\n"
