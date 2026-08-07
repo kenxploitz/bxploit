@@ -1,9 +1,8 @@
 #!/bin/sh
 BXPLOIT_HOME="${BXPLOIT_HOME:-$HOME/.bxploit}"
-export KIMI_CODE_HOME="$BXPLOIT_HOME"
 export BXPLOIT_HOME="$BXPLOIT_HOME"
-[ ! -d "$HOME/.kimi-code" ] && ln -sf "$BXPLOIT_HOME" "$HOME/.kimi-code" 2>/dev/null
-BXPLOIT_BIN="$BXPLOIT_HOME/bin/kimi-code"
+export KIMI_CODE_HOME="$BXPLOIT_HOME"
+BXPLOIT_BIN="$BXPLOIT_HOME/bin/bxploit"
 [ ! -f "$BXPLOIT_BIN" ] && echo "Error: bxploit not installed" && exit 1
 clear
 printf '\033]0;Bxploit\007'
@@ -15,7 +14,7 @@ case "$1" in
     --update|-u) exec sh "$BXPLOIT_HOME/scripts/update.sh" ;;
     --help|-h) echo "BXPLOIT — AI Pentest Framework"; echo "Usage: bxploit [-p query|--setup|--config|--test|--update|--uninstall|--help]"; exit 0 ;;
 esac
-[ ! -f "$BXPLOIT_HOME/config.toml" ] && echo "Run: bxploit --setup" && exit 1
-# Check if -p flag is used, if so don't add --yolo
+[ ! -f "$BXPLOIT_HOME/config.toml" ] && echo "Config belum ada. Running setup..." && exec sh "$BXPLOIT_HOME/scripts/setup.sh"
+[ ! -f "$BXPLOIT_HOME/tui.toml" ] && echo 'theme = "auto"' > "$BXPLOIT_HOME/tui.toml"
 HAS_PROMPT=0; for a in "$@"; do [ "$a" = "-p" ] && HAS_PROMPT=1; done
 if [ "$HAS_PROMPT" = "1" ]; then exec "$BXPLOIT_BIN" "$@"; else exec "$BXPLOIT_BIN" --yolo "$@"; fi
